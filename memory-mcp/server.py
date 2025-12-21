@@ -29,6 +29,8 @@ mcp = FastMCP("Memory Server")
 # Configuration
 MEMORY_FILE = os.path.abspath(os.environ.get("MEMORY_FILE", "memory.db"))
 MODEL_NAME = "all-MiniLM-L6-v2"
+MAX_MEMORIES = int(os.environ.get("MAX_MEMORIES", "5000"))
+SIMILARITY_THRESHOLD = float(os.environ.get("SIMILARITY_THRESHOLD", "0.97"))
 
 # Global state
 model = None
@@ -87,6 +89,52 @@ def add_memory(content: str) -> str:
         embedding = get_embedding(content)
 
         conn = get_db_connection()
+
+        # Intelligent functionality: Deduplication
+        if HAS_SEMANTIC_SEARCH and embedding is not None:
+            cursor = conn.execute("SELECT id, content, embedding FROM memories WHERE embedding IS NOT NULL")
+            rows = cursor.fetchall()
+
+            if rows:
+                embeddings = []
+                ids = []
+                for row in rows:
+                    embeddings.append(decode_embedding(row['embedding']))
+                    ids.append(row['id'])
+
+                if embeddings:
+                    embeddings_matrix = np.vstack(embeddings)
+                    query_embedding = np.frombuffer(embedding, dtype=np.float32)
+
+                    # Normalize
+                    query_norm = np.linalg.norm(query_embedding)
+                    if query_norm > 0:
+                        query_embedding = query_embedding / query_norm
+
+                    doc_norms = np.linalg.norm(embeddings_matrix, axis=1, keepdims=True)
+                    doc_norms[doc_norms == 0] = 1
+                    embeddings_matrix = embeddings_matrix / doc_norms
+
+                    similarities = np.dot(embeddings_matrix, query_embedding)
+                    max_sim_idx = np.argmax(similarities)
+                    max_sim = similarities[max_sim_idx]
+
+                    if max_sim >= SIMILARITY_THRESHOLD:
+                        existing_id = ids[max_sim_idx]
+                        conn.close()
+                        logger.info(f"Duplicate memory detected (similarity {max_sim:.2f}). Existing ID: {existing_id}")
+                        return f"Memory already exists (similarity {max_sim:.2f}). ID: {existing_id}"
+
+        # Enforce max memories
+        cursor = conn.execute("SELECT COUNT(*) FROM memories")
+        count = cursor.fetchone()[0]
+
+        if count >= MAX_MEMORIES:
+            # Delete oldest to make room
+            num_to_delete = count - MAX_MEMORIES + 1
+            conn.execute(f"DELETE FROM memories WHERE id IN (SELECT id FROM memories ORDER BY created_at ASC LIMIT {num_to_delete})")
+            logger.info(f"Pruned {num_to_delete} old memories to enforce limit of {MAX_MEMORIES}")
+
         conn.execute(
             "INSERT INTO memories (id, content, embedding) VALUES (?, ?, ?)",
             (memory_id, content, embedding)
