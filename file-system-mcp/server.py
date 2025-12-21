@@ -2,22 +2,43 @@ import os
 import glob
 import shutil
 import fnmatch
+import logging
+import sys
 from datetime import datetime
 from mcp.server.fastmcp import FastMCP
+
+# Configure logging to stderr
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stderr
+)
+logger = logging.getLogger("file-system-mcp")
 
 mcp = FastMCP("Filesystem Server")
 
 # Configuration
 # By default, we restrict to the current working directory for safety,
 # but this can be configured via env var to point to the large external codebase.
-ROOT_DIR = os.environ.get("FS_ROOT", os.getcwd())
+ROOT_DIR = os.path.abspath(os.environ.get("FS_ROOT", os.getcwd()))
+
+if not os.path.exists(ROOT_DIR):
+    logger.warning(f"Root directory {ROOT_DIR} does not exist. Creating it.")
+    try:
+        os.makedirs(ROOT_DIR)
+    except Exception as e:
+        logger.critical(f"Failed to create root directory {ROOT_DIR}: {e}")
+        sys.exit(1)
 
 def _is_safe_path(path: str) -> bool:
     """Ensure path is within ROOT_DIR."""
     # Resolve absolute paths
-    abs_path = os.path.abspath(os.path.join(ROOT_DIR, path))
-    abs_root = os.path.abspath(ROOT_DIR)
-    return abs_path.startswith(abs_root)
+    try:
+        abs_path = os.path.abspath(os.path.join(ROOT_DIR, path))
+        abs_root = os.path.abspath(ROOT_DIR)
+        return abs_path.startswith(abs_root)
+    except Exception:
+        return False
 
 def _get_abs_path(path: str) -> str:
     return os.path.abspath(os.path.join(ROOT_DIR, path))
@@ -44,6 +65,7 @@ def list_directory(path: str = ".") -> str:
                 type_str = "DIR " if entry.is_dir() else "FILE"
                 items.append(f"{type_str} {entry.name}")
     except Exception as e:
+        logger.error(f"Error listing directory {path}: {e}")
         return f"Error listing directory: {e}"
 
     return "\n".join(sorted(items))
@@ -64,6 +86,7 @@ def get_file_info(path: str) -> str:
         mtime = datetime.fromtimestamp(stats.st_mtime).isoformat()
         return f"Size: {stats.st_size} bytes ({size_mb:.2f} MB)\nModified: {mtime}"
     except Exception as e:
+        logger.error(f"Error getting info for {path}: {e}")
         return f"Error getting info: {e}"
 
 # --- Reading Tools ---
@@ -95,6 +118,7 @@ def read_file(path: str, start_line: int = 1, end_line: int = -1) -> str:
 
         return f"--- File: {path} ({start_line}-{end_line}/{total_lines}) ---\n{content}"
     except Exception as e:
+        logger.error(f"Error reading file {path}: {e}")
         return f"Error reading file: {e}"
 
 @mcp.tool()
@@ -118,6 +142,7 @@ def search_files(path: str = ".", pattern: str = "*") -> str:
         # Return relative paths
         results = [os.path.relpath(f, ROOT_DIR) for f in valid_files]
     except Exception as e:
+        logger.error(f"Error searching files in {path}: {e}")
         return f"Error searching files: {e}"
 
     return "\n".join(results[:100]) + ("\n... (truncated)" if len(results) > 100 else "")
@@ -155,6 +180,7 @@ def grep_search(query: str, path: str = ".") -> str:
                     continue # Skip unreadable files
 
     except Exception as e:
+        logger.error(f"Error during grep in {path}: {e}")
         return f"Error during grep: {e}"
 
     return "\n".join(results) if results else "No matches found."
@@ -172,8 +198,10 @@ def write_file(path: str, content: str) -> str:
         os.makedirs(os.path.dirname(abs_path), exist_ok=True)
         with open(abs_path, 'w', encoding='utf-8') as f:
             f.write(content)
+        logger.info(f"Wrote to file {path}")
         return f"Successfully wrote to {path}"
     except Exception as e:
+        logger.error(f"Error writing file {path}: {e}")
         return f"Error writing file: {e}"
 
 @mcp.tool()
@@ -198,8 +226,10 @@ def replace_in_file(path: str, old_text: str, new_text: str) -> str:
         with open(abs_path, 'w', encoding='utf-8') as f:
             f.write(new_content)
 
+        logger.info(f"Replaced text in {path}")
         return f"Successfully replaced text in {path}"
     except Exception as e:
+        logger.error(f"Error replacing text in {path}: {e}")
         return f"Error replacing text: {e}"
 
 @mcp.tool()
@@ -211,8 +241,10 @@ def create_directory(path: str) -> str:
     abs_path = _get_abs_path(path)
     try:
         os.makedirs(abs_path, exist_ok=True)
+        logger.info(f"Created directory {path}")
         return f"Created directory {path}"
     except Exception as e:
+        logger.error(f"Error creating directory {path}: {e}")
         return f"Error creating directory: {e}"
 
 @mcp.tool()
@@ -227,11 +259,12 @@ def move_file(source: str, destination: str) -> str:
     try:
         os.makedirs(os.path.dirname(abs_dest), exist_ok=True)
         shutil.move(abs_src, abs_dest)
+        logger.info(f"Moved {source} to {destination}")
         return f"Moved {source} to {destination}"
     except Exception as e:
+        logger.error(f"Error moving file {source} to {destination}: {e}")
         return f"Error moving file: {e}"
 
 if __name__ == "__main__":
-    print(f"Filesystem Server running on root: {ROOT_DIR}")
+    logger.info(f"Filesystem Server running on root: {ROOT_DIR}")
     mcp.run()
-

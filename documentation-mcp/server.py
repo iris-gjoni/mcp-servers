@@ -1,15 +1,25 @@
 import os
 import glob
+import logging
+import sys
 import numpy as np
 from mcp.server.fastmcp import FastMCP
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
+# Configure logging to stderr
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stderr
+)
+logger = logging.getLogger("documentation-mcp")
+
 # Initialize FastMCP server
 mcp = FastMCP("Documentation Server")
 
 # Configuration
-DOCS_DIR = os.environ.get("DOCS_DIR", "./docs")
+DOCS_DIR = os.path.abspath(os.environ.get("DOCS_DIR", "./docs"))
 MODEL_NAME = "all-MiniLM-L6-v2"
 
 # Global state for the index
@@ -20,16 +30,16 @@ model = None
 def load_model():
     global model
     if model is None:
-        print(f"Loading model {MODEL_NAME}...")
+        logger.info(f"Loading model {MODEL_NAME}...")
         model = SentenceTransformer(MODEL_NAME)
-        print("Model loaded.")
+        logger.info("Model loaded.")
 
 def index_docs():
     global doc_index, doc_embeddings, model
 
     load_model()
 
-    print(f"Indexing documents in {DOCS_DIR}...")
+    logger.info(f"Indexing documents in {DOCS_DIR}...")
     files = glob.glob(os.path.join(DOCS_DIR, "**/*.md"), recursive=True)
 
     new_index = []
@@ -56,22 +66,22 @@ def index_docs():
                 })
                 texts.append(text_to_embed)
         except Exception as e:
-            print(f"Error reading {fpath}: {e}")
+            logger.error(f"Error reading {fpath}: {e}")
 
     if not texts:
-        print("No documents found.")
+        logger.info("No documents found.")
         doc_index = []
         doc_embeddings = None
         return
 
-    print(f"Encoding {len(texts)} documents...")
+    logger.info(f"Encoding {len(texts)} documents...")
     embeddings = model.encode(texts)
 
     # Normalize for cosine similarity
     norm = np.linalg.norm(embeddings, axis=1, keepdims=True)
     doc_embeddings = embeddings / norm
     doc_index = new_index
-    print("Indexing complete.")
+    logger.info("Indexing complete.")
 
 @mcp.tool()
 def refresh_index():
@@ -128,11 +138,13 @@ def get_full_doc(path: str) -> str:
     except FileNotFoundError:
         return "Error: File not found."
     except Exception as e:
+        logger.error(f"Error reading file {path}: {e}")
         return f"Error reading file: {str(e)}"
 
 if __name__ == "__main__":
     # Ensure docs dir exists
     if not os.path.exists(DOCS_DIR):
+        logger.info(f"Creating documentation directory: {DOCS_DIR}")
         os.makedirs(DOCS_DIR)
         # Create a dummy readme
         with open(os.path.join(DOCS_DIR, "README.md"), "w") as f:
@@ -142,6 +154,6 @@ if __name__ == "__main__":
     try:
         index_docs()
     except Exception as e:
-        print(f"Warning: Initial indexing failed: {e}")
+        logger.warning(f"Warning: Initial indexing failed: {e}")
 
     mcp.run()
