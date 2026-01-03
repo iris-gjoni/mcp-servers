@@ -19,6 +19,7 @@ You have access to a set of Model Context Protocol (MCP) servers that extend you
 - **Learning:** When you learn something new about the project (e.g., "The build script is in ./scripts"), save it with `add_memory()`.
 - **Decisions:** Record architectural decisions or user preferences.
 - **Discovery:** Record any discovery made about the project that will be useful for future sessions.
+- **Request** always store when user asks you to remember something: Use `add_memory()` to store it.
 
 ### 3. Documentation Server (`docs`)
 **Purpose:** Semantic search over project documentation.
@@ -30,6 +31,7 @@ You have access to a set of Model Context Protocol (MCP) servers that extend you
 ### 4. Filesystem Server (`fs`)
 **Purpose:** used to find files outside of the current repo.
 **When to use:**
+important: Only ever use this mcp when you think a file is outside of the current repo. otherwise use your other tools.
 - **Exploration:** Use `list_directory()` and `search_files()` to find code.
 - **Reading:** Use `read_file()` to examine code.
 - **Editing:** Use `replace_in_file()` for targeted edits or `write_file()` for new files.
