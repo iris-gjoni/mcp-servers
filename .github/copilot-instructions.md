@@ -15,9 +15,10 @@ You have access to a set of Model Context Protocol (MCP) servers that extend you
 ### 2. Memory Server (`memory`)
 **Purpose:** Long-term persistent memory for project context, decisions, and user preferences.
 **When to use:**
-- **Start of session:** Search for relevant context (`search_memories`) related to the current task.
+- **always use on every request from the user:** Search for relevant context (`search_memories`) related to the current task.
 - **Learning:** When you learn something new about the project (e.g., "The build script is in ./scripts"), save it with `add_memory()`.
 - **Decisions:** Record architectural decisions or user preferences.
+- **Discovery:** Record any discovery made about the project that will be useful for future sessions.
 
 ### 3. Documentation Server (`docs`)
 **Purpose:** Semantic search over project documentation.
