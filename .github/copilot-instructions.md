@@ -27,7 +27,7 @@ You have access to a set of Model Context Protocol (MCP) servers that extend you
 - **Validation:** Verify your plans against existing documentation.
 
 ### 4. Filesystem Server (`fs`)
-**Purpose:** Safe interaction with the codebase.
+**Purpose:** used to find files outside of the current repo.
 **When to use:**
 - **Exploration:** Use `list_directory()` and `search_files()` to find code.
 - **Reading:** Use `read_file()` to examine code.
@@ -42,6 +42,7 @@ You have access to a set of Model Context Protocol (MCP) servers that extend you
     -   If the request is new, create a plan and add it to `task-state` via `add_task()`.
 
 2.  **Research**:
+    - first always check for memories using a semantic search (`search_memories()`).
     -   If you need documentation, use `search_docs()`.
     -   If you need to find code, use `search_files()` or `grep_search()`.
 

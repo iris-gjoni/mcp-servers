@@ -8,6 +8,13 @@ from typing import Optional
 import numpy as np
 from mcp.server.fastmcp import FastMCP
 
+# Force UTF-8 encoding for stdin/stdout on Windows to avoid encoding errors
+if sys.platform == "win32":
+    if hasattr(sys.stdin, 'reconfigure'):
+        sys.stdin.reconfigure(encoding='utf-8')
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+
 # Configure logging to stderr
 logging.basicConfig(
     level=logging.INFO,
@@ -29,7 +36,7 @@ mcp = FastMCP("Memory Server")
 # Configuration
 MEMORY_FILE = os.path.abspath(os.environ.get("MEMORY_FILE", "memory.db"))
 MODEL_NAME = "all-MiniLM-L6-v2"
-MAX_MEMORIES = int(os.environ.get("MAX_MEMORIES", "5000"))
+MAX_MEMORIES = int(os.environ.get("MAX_MEMORIES", "10000"))
 SIMILARITY_THRESHOLD = float(os.environ.get("SIMILARITY_THRESHOLD", "0.97"))
 
 # Global state
