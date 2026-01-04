@@ -169,6 +169,44 @@ def get_repo_map(project_name: str) -> str:
     logger.info(f"No repo map found for project {project_name}")
     return f"No repo map found for project {project_name}"
 
+@mcp.tool()
+def list_repo_maps() -> str:
+    """
+    Lists available repository maps with statistics and usage instructions.
+    Returns a formatted string containing repo name, file info, size stats, and how to load it.
+    """
+    if not os.path.exists(REPO_MAP_DIR):
+        return "Repo map directory not found."
+
+    files = glob.glob(os.path.join(REPO_MAP_DIR, "**/*.md"), recursive=True)
+    if not files:
+        return "No repo maps found."
+
+    results = []
+    for f in files:
+        try:
+            with open(f, 'r', encoding='utf-8') as file:
+                content = file.read()
+
+            name = os.path.splitext(os.path.basename(f))[0]
+            chars = len(content)
+            lines = len(content.splitlines())
+            # Rough token estimate: 1 token ~= 4 chars
+            tokens = chars // 4
+
+            info = (
+                f"Repo: {name}\n"
+                f"File: {os.path.basename(f)}\n"
+                f"Size: ~{tokens} tokens ({chars} chars, {lines} lines)\n"
+                f"Load with: get_repo_map(\"{name}\")"
+            )
+            results.append(info)
+        except Exception as e:
+            logger.error(f"Error analyzing {f}: {e}")
+            results.append(f"Error analyzing {os.path.basename(f)}: {str(e)}")
+
+    return "\n---\n".join(results)
+
 if __name__ == "__main__":
     # Ensure docs dir exists
     if not os.path.exists(DOCS_DIR):
