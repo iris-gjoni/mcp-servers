@@ -7,7 +7,7 @@
         "C:\\dev\\workspace\\java\\mcp-servers\\documentation-mcp\\server.py"
       ],
       "env": {
-        "DOCS_DIR": "C:\\dev\\workspace\\python\\quantTesting\\doc_mcp\\docs"
+        "DOCS_DIR": "C:\\dev\\workspace\\java\\mcp-servers\\documentation"
       }
     },
     "fs": {
@@ -17,7 +17,7 @@
         "C:\\dev\\workspace\\java\\mcp-servers\\file-system-mcp\\server.py"
       ],
       "env": {
-        "FS_ROOT": "C:\\path\\to\\your\\large\\codebase"
+        "FS_ROOT": "C:\\dev\\workspace\\java\\mcp-servers"
       }
     },
     "memory": {
@@ -25,14 +25,20 @@
       "args": [
         "-u",
         "C:\\dev\\workspace\\java\\mcp-servers\\memory-mcp\\server.py"
-      ]
+      ],
+      "env": {
+        "MEMORY_FILE": "C:\\dev\\workspace\\java\\mcp-servers\\memory-mcp\\memory.db"
+      }
     },
     "task-state": {
       "command": "python",
       "args": [
         "-u",
         "C:\\dev\\workspace\\java\\mcp-servers\\task-state-mcp\\server.py"
-      ]
+      ],
+      "env": {
+        "TASK_DB_FILE": "C:\\dev\\workspace\\java\\mcp-servers\\task-state-mcp\\tasks.db"
+      }
     }
   }
 }

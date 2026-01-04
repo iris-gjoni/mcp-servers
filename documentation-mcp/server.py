@@ -19,7 +19,9 @@ logger = logging.getLogger("documentation-mcp")
 mcp = FastMCP("Documentation Server")
 
 # Configuration
-DOCS_DIR = os.path.abspath(os.environ.get("DOCS_DIR", "./docs"))
+script_dir = os.path.dirname(os.path.abspath(__file__))
+DOCS_DIR = os.path.abspath(os.environ.get("DOCS_DIR", os.path.join(script_dir, "docs")))
+REPO_MAP_DIR = os.path.abspath(os.path.join(script_dir, "..", "repo-map"))
 MODEL_NAME = "all-MiniLM-L6-v2"
 
 # Global state for the index
@@ -140,6 +142,32 @@ def get_full_doc(path: str) -> str:
     except Exception as e:
         logger.error(f"Error reading file {path}: {e}")
         return f"Error reading file: {str(e)}"
+
+@mcp.tool()
+def get_repo_map(project_name: str) -> str:
+    """
+    Retrieve the repo map for a given project by finding the corresponding .md file in the repo-map directory.
+    Traverses the file structure to find the file named {project_name}.md.
+    """
+    logger.info(f"Searching for repo map for project: {project_name}")
+    logger.info(f"REPO_MAP_DIR: {REPO_MAP_DIR}")
+    files = glob.glob(os.path.join(REPO_MAP_DIR, "**/*.md"), recursive=True)
+    logger.info(f"Files found: {files}")
+    for f in files:
+        basename = os.path.basename(f)
+        logger.info(f"Checking file: {f}, basename: {basename}")
+        if basename == f"{project_name}.md":
+            logger.info(f"Match found: {f}")
+            try:
+                with open(f, 'r', encoding='utf-8') as file:
+                    content = file.read()
+                    logger.info(f"Content length: {len(content)}")
+                    return content
+            except Exception as e:
+                logger.error(f"Error reading {f}: {e}")
+                return f"Error reading file: {str(e)}"
+    logger.info(f"No repo map found for project {project_name}")
+    return f"No repo map found for project {project_name}"
 
 if __name__ == "__main__":
     # Ensure docs dir exists
