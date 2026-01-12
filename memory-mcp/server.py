@@ -22,6 +22,7 @@ logging.basicConfig(
     stream=sys.stderr
 )
 logger = logging.getLogger("memory-mcp")
+logger.info("Initializing Memory MCP Server...")
 
 # Conditional import for semantic search dependencies
 try:
@@ -48,6 +49,7 @@ def get_db_connection():
     return conn
 
 def init_db():
+    logger.info("Starting database initialization...")
     try:
         # Ensure directory exists
         db_dir = os.path.dirname(MEMORY_FILE)
@@ -266,8 +268,18 @@ def delete_memory(memory_id: str) -> str:
 
 if __name__ == "__main__":
     try:
+        logger.info("Starting server initialization sequence...")
         init_db()
+        logger.info("Database initialized successfully.")
+
+        if HAS_SEMANTIC_SEARCH:
+             logger.info("Semantic search is enabled.")
+        else:
+             logger.info("Semantic search is disabled (sentence-transformers not found).")
+
+        logger.info("Server is fully initialized and ready to receive requests.")
         mcp.run()
     except Exception as e:
         logger.critical(f"Server failed to start: {e}")
+        sys.exit(1)
         sys.exit(1)
